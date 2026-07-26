@@ -36,16 +36,22 @@ conda activate ai-toolkit
 
 **2) Install PyTorch**
 
+On DGX Spark (aarch64), PyPI only publishes torchcodec 0.11 and newer. TorchCodec 0.11 requires PyTorch 2.11+, so install that stack first:
+
 ```
 pip3 install torch==2.13.0 torchvision==0.28.0 torchaudio==2.11.0 --index-url https://download.pytorch.org/whl/cu130
 ```
+
+pip will pick matching torchvision and torchaudio builds for cu130.
 
 
 **3) Install the remaining requirements (dgx_requirements.txt)**
 
 ```
-pip3 install -r dgx_requirements.txt
+pip3 install -c constraints.txt -r dgx_requirements.txt
 ```
+
+`constraints.txt` pins a few transitive dependencies (numba, scikit-learn) that otherwise resolve to versions incompatible with librosa on aarch64. `requirements_base.txt` leaves torchcodec unpinned so pip can install the latest build matched to your PyTorch version.
 
 ### Running the UI on DGX OS:
 
@@ -58,7 +64,7 @@ Download a Linux ARM64 build of Node.js from: https://nodejs.org (for example: h
 
 Extract it and add the bin directory to your path. I extracted it to **/opt** and added the following to my ~/.bashrc file:
 ```
-export PATH=“/opt/node-v24.11.1-linux-arm64/bin:$PATH”
+export PATH="/opt/node-v24.11.1-linux-arm64/bin:$PATH"
 ```
 
 
@@ -70,15 +76,36 @@ cd ui
 npm run build_and_start
 ```
 
-If all went well, you’ll be able to access the UI on port 8675 and start training.
+If all went well, you'll be able to access the UI on port 8675 and start training.
 
 
 <details>
   <summary>Troubleshooting issues</summary>
-If you’re not getting any output when starting a training job from the UI, it’s probably crashing before the process started, the best way to debug these issues is to run the python training script directly (which is normally started by the UI). To do this, set up a training job in the UI, go to the advanced config screen, copy and paste the configuration into a file like train.yaml, then run the training script like this with the conda virtual environment active:
+
+**Training job produces no output from the UI**
+
+It's probably crashing before the process started. Run the python training script directly (which is normally started by the UI). Set up a training job in the UI, go to the advanced config screen, copy and paste the configuration into a file like `train.yaml`, then run:
 
 ```
 python run.py path/to/train.yaml
 ```
+
+**`Could not load libtorchcodec` when importing torchcodec**
+
+This usually means PyTorch and TorchCodec versions are mismatched. On aarch64 you need PyTorch 2.11+ with an unpinned torchcodec install (see step 2 above). Re-run:
+
+```
+pip3 install torch==2.13.0 torchvision==0.28.0 torchaudio==2.11.0 --index-url https://download.pytorch.org/whl/cu130
+pip3 install -c constraints.txt -r dgx_requirements.txt
+```
+
+**Updating after a git pull**
+
+```
+conda activate ai-toolkit
+pip3 install torch==2.13.0 torchvision==0.28.0 torchaudio==2.11.0 --index-url https://download.pytorch.org/whl/cu130
+pip3 install -c constraints.txt -r dgx_requirements.txt
+```
+
 </details>
 <br>
